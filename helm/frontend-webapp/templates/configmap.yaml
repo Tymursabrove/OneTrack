@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "frontend-webapp.fullname" . }}
+  labels:
+    {{- include "frontend-webapp.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.appConfig.port | quote }}
+  FIREBASE_URL: {{ .Values.appConfig.firebaseUrl | quote }}
+  FIREBASE_API_KEY: {{ .Values.appConfig.firebaseApiKey | quote }}
+  DATA_SERVICE_URL: {{ .Values.appConfig.dataServiceUrl | quote }}

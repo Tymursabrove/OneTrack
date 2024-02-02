@@ -1,0 +1,457 @@
+import type { ITableColumn } from '$lib/components/table/types'
+import type { GoogleCampaignsData, GoogleAdSetsData, GoogleAdsData } from '$lib/types/HttpResponsesTypes'
+
+import { getTableSetups } from '$lib/components/layout/Attribution/misc'
+import { getAverageExcludeZeros, getSum, formatCurrency } from '$lib/components/layout/Attribution/utils';
+import { getSumRaw } from '$lib/helpers/MiscHelpers';
+
+export const KPIData: {
+  kpi: string;
+  kpiName: string;
+  definitionOfTheKPI: string;
+  calculationMethod: "Sum" | "Average" | "N/A",
+  customSummarizer?: (data: GoogleCampaignsData[]) => string,
+  format?: "currency"
+}[] =
+  [
+    {
+      "kpi": "costMicros",
+      "kpiName": "Cost",
+      "definitionOfTheKPI": "The sum of your cost-per-click (CPC) and cost-per-thousand impressions (CPM) costs during this period.",
+      "calculationMethod": "Sum",
+      format: "currency"
+    },
+    {
+      "kpi": "leadConversions",
+      "kpiName": "Lead Conv.",
+      "definitionOfTheKPI": "The sum of converted leads over the given time period. Measured by Google.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "ot_leads",
+      "kpiName": "Lead Conv.",
+      "definitionOfTheKPI": "The sum of converted leads over the given time period. Measured by OneTrack.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "averageCpl",
+      "kpiName": "CPL",
+      "definitionOfTheKPI": "The cost per lead (CPL) during this period. Measured by Google.",
+      "calculationMethod": "Sum",
+      customSummarizer: (data: GoogleCampaignsData[]) => {
+        let totalCost = Number(getSum(data.map(x => x.metrics.google.costMicros)));
+        let totalLeads = Number(getSum(data.map(x => x.metrics.google.leadConversions)));
+        if (totalCost == 0 || totalLeads == 0) {
+          return "0";
+        }
+        return (totalCost / totalLeads).toFixed(2);
+      },
+      format: "currency"
+
+    },
+    {
+      "kpi": "ot_costPerLead",
+      "kpiName": "CPL",
+      "definitionOfTheKPI": "The cost per lead (CPL) during this period. Measured by OneTrack.",
+      "calculationMethod": "Average",
+      customSummarizer: (data: GoogleCampaignsData[]) => {
+        let totalCost = Number(getSum(data.map(x => x.metrics.google.costMicros)));
+        let totalLeads = Number(getSum(data.map(x => x.metrics.onetrack.leads)));
+        if (totalCost == 0 || totalLeads == 0) {
+          return "0";
+        }
+        return (totalCost / totalLeads).toFixed(2);
+      },
+      format: "currency"
+
+    },
+    {
+      "kpi": "roasMicros",
+      "kpiName": "ROAS",
+      "definitionOfTheKPI": "The return on ad spend (ROAS) during this period.",
+      "calculationMethod": "Average",
+      customSummarizer: (data: GoogleCampaignsData[]) => {
+        let totalCost = getSumRaw(data.map(x => x.metrics.google.costMicros));
+        let totalPurchaseValue = getSumRaw(data.map(x => x.metrics.google.purchaseConversionsValue));
+        if (totalCost == 0 || totalPurchaseValue == 0) {
+          return "0";
+        }
+        return (totalPurchaseValue / totalCost).toFixed(2);
+      },
+      format: "currency"
+    },
+    {
+      "kpi": "ot_purchaseROAS",
+      "kpiName": "ROAS",
+      "definitionOfTheKPI": "The return on ad spend (ROAS) during this period. Measured by OneTrack.",
+      "calculationMethod": "Average",
+      customSummarizer: (data: GoogleCampaignsData[]) => {
+        let totalCost = getSumRaw(data.map(x => x.metrics.google.costMicros));
+        let totalPurchaseValue = getSumRaw(data.map(x => x.metrics.onetrack.purchaseValue));
+        if (totalCost == 0 || totalPurchaseValue == 0) {
+          return "0";
+        }
+        return (totalPurchaseValue / totalCost).toFixed(2);
+      },
+      format: "currency"
+    },
+    {
+      "kpi": "purchaseConversions",
+      "kpiName": "Purchase Conv.",
+      "definitionOfTheKPI": "The total number of completed purchases over the given time period.",
+      "calculationMethod": "Sum",
+    },
+    {
+      "kpi": "ot_purchases",
+      "kpiName": "Purchase Conv.",
+      "definitionOfTheKPI": "The total number of completed purchases over the given time period. Measured by OneTrack.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "purchaseConversionsValue",
+      "kpiName": "Purchase Conv. Value",
+      "definitionOfTheKPI": "The total value of completed purchases over the given time period.",
+      "calculationMethod": "Sum",
+      format: "currency"
+    },
+    {
+      "kpi": "ot_purchaseValue",
+      "kpiName": "Purchase Conv. Value",
+      "definitionOfTheKPI": "The total value of completed purchases over the given time period. Measured by OneTrack.",
+      "calculationMethod": "Sum",
+      format: "currency"
+    },
+    {
+      "kpi": "valuePerConversionPurchase",
+      "kpiName": "Avg. Order Value (Google)",
+      "definitionOfTheKPI": "The average value generated by each purchase conversion.",
+      "calculationMethod": "Average",
+      format: "currency"
+    },
+    {
+      "kpi": "ot_averagePurchaseValue",
+      "kpiName": "Avg. Order Value",
+      "definitionOfTheKPI": "The average value generated by each purchase conversion. Measured by OneTrack.",
+      "calculationMethod": "Average",
+      format: "currency"
+    },
+    {
+      "kpi": "ot_costPerPurchase",
+      "kpiName": "CPP",
+      "definitionOfTheKPI": "The cost per purchase (CPP) during this period. Measured by OneTrack.",
+      "calculationMethod": "Average",
+      format: "currency"
+    },
+    {
+      "kpi": "averageCost",
+      "kpiName": "Avg. Cost",
+      "definitionOfTheKPI": "The average cost per click or impression during this period.",
+      "calculationMethod": "Average",
+      format: "currency"
+    },
+    {
+      "kpi": "averageCpc",
+      "kpiName": "Avg. CPC",
+      "definitionOfTheKPI": "The average cost per click during this period.",
+      "calculationMethod": "Average",
+      format: "currency"
+    },
+    {
+      "kpi": "averageCpe",
+      "kpiName": "Avg. CPE",
+      "definitionOfTheKPI": "The average cost per lead conversion during this period.",
+      "calculationMethod": "Average",
+      format: "currency"
+    },
+    {
+      "kpi": "averageCpm",
+      "kpiName": "Avg. CPM",
+      "definitionOfTheKPI": "The average cost per thousand impressions during this period.",
+      "calculationMethod": "Average",
+      format: "currency"
+    },
+    {
+      "kpi": "averageCpv",
+      "kpiName": "Avg. CPV",
+      "definitionOfTheKPI": "The average cost per view during this period.",
+      "calculationMethod": "Average",
+      format: "currency"
+    },
+    {
+      "kpi": "clicks",
+      "kpiName": "Clicks",
+      "definitionOfTheKPI": "The total number of clicks over the given time period.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "ctr",
+      "kpiName": "CTR",
+      "definitionOfTheKPI": "The click-through rate (CTR) for the ad during this period.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "engagementRate",
+      "kpiName": "Engmt. Rate",
+      "definitionOfTheKPI": "The engagement rate for the ad during this period.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "impressions",
+      "kpiName": "Impressions",
+      "definitionOfTheKPI": "The total number of impressions (views) for the ad during this period.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "pageViewConversions",
+      "kpiName": "Page View Conv.",
+      "definitionOfTheKPI": "The total number of page view conversions over the given time period.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "addToCartConversions",
+      "kpiName": "Add To Cart Conv.",
+      "definitionOfTheKPI": "The total number of add to cart conversions over the given time period.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "initiateCheckoutConversions",
+      "kpiName": "Init. Checkout Conv.",
+      "definitionOfTheKPI": "The total number of conversions related to initiating the checkout process over the given time period.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "subscribeConversions",
+      "kpiName": "Subscribe Conv.",
+      "definitionOfTheKPI": "The total number of subscriptions or sign-ups over the given time period.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "pageViewConversionRate",
+      "kpiName": "Page View Conv. Rate",
+      "definitionOfTheKPI": "The page view conversion rate for the ad during this period.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "addToCartConversionRate",
+      "kpiName": "Add To Cart Conv. Rate",
+      "definitionOfTheKPI": "The conversion rate for adding items to the cart during this period.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "initiateCheckoutConversionRate",
+      "kpiName": "Init. Checkout Conv. Rt",
+      "definitionOfTheKPI": "The conversion rate for initiating the checkout process during this period.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "purchaseConversionRate",
+      "kpiName": "Purchase Conv. Rate",
+      "definitionOfTheKPI": "The conversion rate for completed purchases during this period.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "leadConversionRate",
+      "kpiName": "Lead Conv. Rate",
+      "definitionOfTheKPI": "The conversion rate for leads during this period.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "subscribeConversionRate",
+      "kpiName": "Subscribe Conv. Rate",
+      "definitionOfTheKPI": "The conversion rate for subscriptions or sign-ups during this period.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "videoViews",
+      "kpiName": "Video Views",
+      "definitionOfTheKPI": "The total number of video views for the ad during this period.",
+      "calculationMethod": "Sum"
+    },
+    {
+      "kpi": "videoQuartileP100Rate",
+      "kpiName": "Video Q100% Rate",
+      "definitionOfTheKPI": "The percentage of viewers who watched the entire video ad.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "videoQuartileP25Rate",
+      "kpiName": "Video Q25% Rate",
+      "definitionOfTheKPI": "The percentage of viewers who reached the 25% mark of the video ad.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "videoQuartileP50Rate",
+      "kpiName": "Video Q50% Rate",
+      "definitionOfTheKPI": "The percentage of viewers who reached the 50% mark (midpoint) of the video ad.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "videoQuartileP75Rate",
+      "kpiName": "Video Q75% Rate",
+      "definitionOfTheKPI": "The percentage of viewers who reached the 75% mark of the video ad.",
+      "calculationMethod": "Average"
+    },
+    {
+      "kpi": "videoViewRate",
+      "kpiName": "Video View Rate",
+      "definitionOfTheKPI": "The percentage of impressions that resulted in a video view.",
+      "calculationMethod": "Average"
+    }
+  ];
+export function getSharedCols(): ITableColumn[] {
+  let columns: ITableColumn[] = [{
+    name: 'account_name',
+    title: 'Account Name',
+    info: 'Name of the Google Ads account.',
+    icon: 'google',
+    minWidth: 220,
+    getValue: (row: GoogleCampaignsData) => row.customerId,
+  }
+];
+  KPIData.forEach(col => {
+    let obj: ITableColumn = {
+      name: col.kpi,
+      title: col.kpiName,
+      info: col.definitionOfTheKPI,
+      icon: col.kpi.startsWith("ot_") ? "onetrack:static" : "google",
+      minWidth: 220,
+      type: col.kpiName === 'ROAS' ? 'roas' : undefined,
+      getValue: (row: GoogleCampaignsData) => {
+        if (col.kpi.startsWith("ot_")) {
+          let id = col.kpi.replace("ot_", "");
+          let key = id as keyof typeof row.metrics.onetrack;
+          return row.metrics.onetrack[key];
+        }
+        else {
+          let key = col.kpi as keyof typeof row.metrics.google;
+          return row.metrics.google[key];
+        }
+      }
+    };
+
+    if (col.format == "currency") {
+      obj.display = formatCurrency;
+    }
+
+    obj.getSummary = (data: GoogleCampaignsData[]) => {
+
+      if (col.customSummarizer) {
+        return col.customSummarizer(data);
+      }
+
+      if (col.kpi.startsWith("ot_")) {
+        let id = col.kpi.replace("ot_", "");
+        let typeObj = data[0];
+        let key = id as keyof typeof typeObj.metrics.onetrack;
+        if (col.calculationMethod == "Sum") {
+          return getSum(data.map(row => row.metrics.onetrack[key]), 0)
+        }
+        if (col.calculationMethod == "Average") {
+          return getAverageExcludeZeros(data.map(row => row.metrics.onetrack[key]), 0)
+        }
+      }
+      else {
+        let typeObj = data[0];
+        let key = col.kpi as keyof typeof typeObj.metrics.google;
+        if (col.calculationMethod == "Sum") {
+          return getSum(data.map(row => row.metrics.google[key]), 0)
+        }
+        if (col.calculationMethod == "Average") {
+          return getAverageExcludeZeros(data.map(row => row.metrics.google[key]), 0)
+        }
+      }
+      return "";
+    }
+
+    columns.push(obj);
+  });
+  return columns;
+}
+
+export function getMetaSources() {
+  return {
+    campaigns: {
+      title: 'Campaigns',
+      icon: 'folder',
+      name: `campaigns`,
+      insertCols: [{
+        name: 'id',
+        title: 'Select',
+        controlsDisabled: true,
+        width: 80,
+        getValue: (row: GoogleCampaignsData) => row.campaignId,
+      }, {
+        name: 'campaign_name',
+        title: 'Campaign Name',
+        info: 'Name of the specific marketing campaign.',
+        icon: 'google',
+        minWidth: 300,
+        getValue: (row: GoogleCampaignsData) => row.campaignName,
+      }, {
+        name: 'campaign_id',
+        title: 'Campaign ID',
+        info: 'Unique identifier for the marketing campaign.',
+        icon: 'google',
+        minWidth: 220,
+        getValue: (row: GoogleCampaignsData) => row.campaignId,
+      }],
+      insertAt: 1, // accountName, ...insertCols, ...
+    },
+    adSets: {
+      title: 'Ad Sets',
+      icon: 'four-dots',
+      name: `ad_sets`,
+      insertCols: [{
+        name: 'id',
+        title: 'Select',
+        controlsDisabled: true,
+        width: 80,
+        getValue: (row: GoogleAdSetsData) => row.adGroupId,
+      }, {
+        name: 'ad_set_name',
+        title: 'Ad Set Name',
+        info: 'Name of the ad set within the campaign.',
+        icon: 'google',
+        minWidth: 300,
+        getValue: (row: GoogleAdSetsData) => row.adGroupName,
+      }, {
+        name: 'ad_set_id',
+        title: 'Ad Set ID',
+        info: 'Unique identifier for the ad set.',
+        icon: 'google',
+        minWidth: 220,
+        getValue: (row: GoogleAdSetsData) => row.adGroupId,
+      }],
+      insertAt: 1, // accountName, ...insertCols, ...
+    },
+    ads: {
+      title: 'Ads',
+      icon: 'graphic-progression',
+      name: `ads`,
+      insertCols: [{
+        name: 'id',
+        title: 'Select',
+        controlsDisabled: true,
+        width: 80,
+        getValue: (row: GoogleAdsData) => row.adId,
+      }, {
+        name: 'ad_name',
+        title: 'Ad Name',
+        info: 'Name of the individual ad within the ad set.',
+        icon: 'google',
+        minWidth: 300,
+        getValue: (row: GoogleAdsData) => row.adName,
+      }, {
+        name: 'ad_id',
+        title: 'Ad ID',
+        info: 'Unique identifier for the ad.',
+        icon: 'google',
+        minWidth: 220,
+        getValue: (row: GoogleAdsData) => row.adId,
+      }],
+      insertAt: 1, // accountName, ...insertCols, ...
+    }
+  }
+}
+
+export const tableSetups = getTableSetups(getSharedCols, getMetaSources)

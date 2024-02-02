@@ -1,0 +1,85 @@
+version: '3'
+
+set: [pipefail]
+
+vars:
+  # DOCKER_REGISTRY: 836001394792.dkr.ecr.eu-central-1.amazonaws.com # staging
+  DOCKER_REGISTRY: 711565168295.dkr.ecr.eu-central-1.amazonaws.com # prod
+  DOCKER_NAME: frontend-webapp
+  WORKSPACE:
+    sh: |
+      cat .workspace || echo "dev-$(shuf -i 1001-9999 -n 1)" | tee .workspace
+  TF_BACKEND:
+    sh: |
+      if [[ "{{.WORKSPACE}}" = "prod" ]]; then
+        echo -n "backends/production.tfbackend"
+      else
+        echo -n "backends/development.tfbackend"
+      fi
+
+tasks:
+  workspace-init:
+    desc: initializes the terraform workspace
+    aliases: [ws, ws-init]
+    cmds:
+      - |
+        cd terraform
+        terraform init -backend-config {{.TF_BACKEND}} -reconfigure
+        terraform workspace select {{.WORKSPACE}} || terraform workspace new {{.WORKSPACE}} && terraform workspace select {{.WORKSPACE}}
+
+  workspace-deploy:
+    desc: runs terraform apply
+    aliases: [ws-dpl, ws-deploy]
+    cmds:
+      - |
+        cd terraform
+        if [[ ! "$(terraform workspace show)" = "{{.WORKSPACE}}" ]]; then
+          >&2 echo "error: workspace '{{.WORKSPACE}}' unknown, run workspace-init task"
+          exit 1
+        fi
+        terraform validate
+        terraform apply
+
+  workspace-destroy:
+    desc: destroys the terraform workspace and all its related resources
+    aliases: [ws-dst, ws-destroy]
+    cmds:
+      - |
+        cd terraform
+        terraform destroy
+        terraform workspace select default
+        terraform workspace delete {{.WORKSPACE}}
+        cd ..
+        rm -rf .workspace
+
+  workspace-list:
+    desc: shows all the available terraform workspaces
+    aliases: [ws-ls, ws-list]
+    cmds:
+      - |
+        cd terraform
+        terraform workspace list
+
+  build:
+    desc: builds docker image
+    cmds:
+      - |
+        docker build -t {{.DOCKER_REGISTRY}}/{{.DOCKER_NAME}}:latest .
+
+  run:
+    desc: runs the docker image locally
+    cmds:
+      - |
+        docker run --rm -p "3000:3000" {{.DOCKER_REGISTRY}}/{{.DOCKER_NAME}}:latest
+
+  push:
+    desc: pushes docker image
+    cmds:
+      - |
+        docker push {{.DOCKER_REGISTRY}}/{{.DOCKER_NAME}}:latest
+
+  clean:
+    desc: cleans up build and package artifacts
+    cmds:
+      - |
+        docker rmi {{.DOCKER_REGISTRY}}/{{.DOCKER_NAME}}:latest

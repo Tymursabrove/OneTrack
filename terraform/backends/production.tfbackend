@@ -1,0 +1,5 @@
+bucket         = "one-track-io-terraform-state"
+dynamodb_table = "terraform-state-lock"
+key            = "frontend-webapp/terraform.tfstate"
+region         = "eu-central-1"
+profile        = "one-track-production"
